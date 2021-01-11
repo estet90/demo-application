@@ -1,0 +1,6 @@
+plugins {
+    id "java"
+}
+
+group "ru.craftysoft.error"
+version "1.0.0"

@@ -1,0 +1,22 @@
+dependencies {
+    compile(
+            "com.google.dagger:dagger",
+            "com.google.code.findbugs:jsr305",
+            "javax.annotation:javax.annotation-api",
+            "org.hibernate.validator:hibernate-validator",
+
+            "org.slf4j:slf4j-api",
+            "ch.qos.logback:logback-classic",
+
+            "io.projectreactor:reactor-core",
+
+            "com.fasterxml.jackson.core:jackson-core",
+            "com.fasterxml.jackson.module:jackson-module-parameter-names",
+            "com.fasterxml.jackson.datatype:jackson-datatype-jdk8",
+            "com.fasterxml.jackson.datatype:jackson-datatype-jsr310",
+
+            "org.snakeyaml:snakeyaml-engine",
+
+            "commons-cli:commons-cli",
+    )
+}

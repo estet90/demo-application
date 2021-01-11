@@ -1,0 +1,99 @@
+openapi: 3.0.2
+info:
+  title: demo-service
+  version: 1.0.0
+servers:
+  - url: /demo-service/api/v1
+
+paths:
+  /users/{id}/tasks:
+    get:
+      operationId: getAllTasksByUserId
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: Успех
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/GetAllTasksByUserIdResponse'
+        default:
+          description: Ошибка
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      operationId: addTaskToUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/Task'
+      responses:
+        200:
+          description: Успех
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/AddTaskToUserResponse'
+        default:
+          description: Ошибка
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    GetAllTasksByUserIdResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/TaskWithId'
+    TaskWithId:
+      allOf:
+        - type: object
+          required:
+            - id
+          properties:
+            id:
+              type: integer
+        - $ref: '#/components/schemas/Task'
+    AddTaskToUserResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: integer
+    Task:
+      type: object
+      required:
+        - name
+        - dateTime
+      properties:
+        name:
+          type: string
+        dateTime:
+          type: string
+          format: 'date-time'
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+        message:
+          type: string

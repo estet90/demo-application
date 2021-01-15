@@ -1,12 +1,15 @@
 package ru.craftysoft.util.module.kafka;
 
 import lombok.extern.slf4j.Slf4j;
-import ru.craftysoft.util.module.common.properties.PropertyResolver;
+import ru.craftysoft.util.module.common.properties.ApplicationProperties;
 
 import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -24,10 +27,10 @@ public class KafkaListenerStarter {
     private final AtomicReference<Boolean> isStarted = new AtomicReference<>(false);
 
     public KafkaListenerStarter(Supplier<KafkaListenerTask<?, ?>> taskFactory,
-                                PropertyResolver propertyResolver,
+                                ApplicationProperties applicationProperties,
                                 String prefix) {
         this.taskFactory = taskFactory;
-        this.threadsCount = propertyResolver.getRequiredIntProperty("kafka." + prefix + "threads-count");
+        this.threadsCount = applicationProperties.getRequiredProperty("kafka." + prefix + "threads-count", Integer::parseInt);
         this.prefix = prefix;
         this.consumerName = "kafka-consumer." + prefix;
         this.executorService = Executors.newFixedThreadPool(threadsCount, namedThreadPoolFactory(consumerName));

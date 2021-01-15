@@ -30,14 +30,17 @@ public class YamlParser {
         if (object == null) {
             return List.of();
         }
-        if (object instanceof Map<?, ?> map) {
+        if (object instanceof Map) {
+            @SuppressWarnings("unchecked")
+            var map = (Map<String, Object>) object;
             return map.entrySet().stream()
                     .flatMap(entry -> YamlParser.parseProperties(entry.getValue()).stream()
                             .map(nestedEntry -> Map.entry(key(entry, nestedEntry), nestedEntry.getValue()))
                     )
                     .collect(Collectors.toList());
         }
-        if (object instanceof List<?> list) {
+        if (object instanceof List) {
+            var list = (List<?>) object;
             var result = new ArrayList<Map.Entry<String, String>>();
             int bound = list.size();
             for (int i = 0; i < bound; i++) {
@@ -48,8 +51,9 @@ public class YamlParser {
             }
             return result;
         }
-        if (object instanceof Set<?> set) {
+        if (object instanceof Set) {
             var result = new ArrayList<Map.Entry<String, String>>();
+            var set = (Set<?>) object;
             var iterator = set.iterator();
             for (int i = 0; iterator.hasNext(); i++) {
                 var value = iterator.next();

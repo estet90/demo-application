@@ -58,8 +58,9 @@ task generateRestApiWrap() {
 }
 
 runtime {
+    enableCds()
     addOptions("--strip-debug", "--compress", "2", "--no-header-files", "--no-man-pages")
-    addModules("java.naming", "java.xml")
+    addModules("java.base", "java.naming", "java.xml", "jdk.unsupported")
     launcher {
         jvmArgs = ["--enable-preview"]
     }

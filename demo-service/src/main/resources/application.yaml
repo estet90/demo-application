@@ -1,7 +1,0 @@
-db:
-  demo:
-    host: localhost
-    port: 5432
-    name: demo
-    username: postgres
-    password: postgres

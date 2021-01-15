@@ -1,0 +1,12 @@
+db:
+  demo:
+    host: localhost
+    port: 5432
+    name: demo
+    username: postgres
+    password: postgres
+
+logging.level:
+  ru.craftysoft: debug
+  ru.craftysoft.demoservice: trace
+  reactor.netty.http.server: info

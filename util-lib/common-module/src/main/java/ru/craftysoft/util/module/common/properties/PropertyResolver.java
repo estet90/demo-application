@@ -49,7 +49,7 @@ public class PropertyResolver {
         try {
             requireNonNull(key);
         } catch (Exception e) {
-            log.error("PropertyResolver.getProperty.thrown key={}", key, e);
+            log.error("PropertyResolver.getRequiredProperty.thrown key={}", key, e);
             throw e;
         }
         return getProperty(key, transformer);

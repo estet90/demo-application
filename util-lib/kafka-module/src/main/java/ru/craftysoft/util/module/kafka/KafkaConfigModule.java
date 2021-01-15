@@ -18,7 +18,7 @@ public class KafkaConfigModule {
 
     @Provides
     @Singleton
-    @Named("kafkaAclConsumerConfig")
+    @Named("providesKafkaConsumerConfig")
     static Map<String, Object> providesKafkaConsumerConfig(PropertyResolver propertyResolver, @Named("kafkaApplicationName") String applicationName) {
         var consumerConfigs = new HashMap<String, Object>();
         var username = propertyResolver.getRequiredProperty("kafka.username");
@@ -42,7 +42,7 @@ public class KafkaConfigModule {
                 .filter(e -> !e.getKey().startsWith("consumer"))
                 .filter(e -> !e.getKey().startsWith("producer"))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        var config = new HashMap<String, Object>();
+        var config = new HashMap<String, Object>(commonProperties);
         var username = properties.getRequiredProperty("kafka.username");
         var password = properties.getRequiredProperty("kafka.password");
 
@@ -54,5 +54,12 @@ public class KafkaConfigModule {
 
         config.putAll(concreteConfig);
         return config;
+    }
+
+    @Provides
+    @Singleton
+    @Named("kafkaApplicationName")
+    static String providesKafkaApplicationName(@Named("applicationName") String applicationName) {
+        return applicationName.replace('-', '.').replace('_', '.').toLowerCase();
     }
 }

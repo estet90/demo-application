@@ -7,6 +7,6 @@ db:
     password: postgres
 
 logging.level:
-  ru.craftysoft: debug
+  ru.craftysoft: trace
   ru.craftysoft.demoservice: trace
   reactor.netty.http.server: info

@@ -27,6 +27,9 @@ allprojects {
                     "org.slf4j:jul-to-slf4j:1.7.30",
                     "ch.qos.logback:logback-classic:1.2.3",
 
+                    "io.jaegertracing:jaeger-core:1.5.0",
+                    "io.jaegertracing:jaeger-thrift:1.5.0",
+
                     "io.vertx:vertx-pg-client:4.0.0",
 
                     "com.fasterxml.jackson.core:jackson-core:$jacksonVersion",

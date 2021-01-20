@@ -1,53 +1,34 @@
 package ru.craftysoft.util.module.common.properties;
 
-import reactor.core.publisher.Flux;
+import lombok.extern.slf4j.Slf4j;
 
 import javax.annotation.Nullable;
-import java.util.*;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
-import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.toMap;
 
+@Slf4j
 public class ApplicationProperties {
-    private final List<PropertySource> sources;
+    private final ConfigurationPropertiesSubscriber subscriber;
 
-    public ApplicationProperties(Set<PropertySource> sources) {
-        this.sources = sources.stream()
-                .sorted(comparing(PropertySource::priority).reversed())
-                .collect(Collectors.toList());
+    public ApplicationProperties(ConfigurationPropertiesSubscriber subscriber) {
+        this.subscriber = subscriber;
     }
 
     @Nullable
     public String getProperty(String key) {
-        return this.sources.stream()
-                .map(s -> s.getProperty(key))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+        return this.subscriber.getProperties().get(key);
     }
 
     public Map<String, String> getProperties(String prefix) {
         var dottedPrefix = prefix.endsWith(".") || prefix.isEmpty()
                 ? prefix
                 : prefix + ".";
-        return this.sources.stream()
-                .map(s -> s.getProperties(dottedPrefix))
-                .flatMap(m -> m.entrySet().stream())
+        return this.subscriber.getProperties().entrySet().stream()
+                .filter(property -> property.getKey().startsWith(prefix))
                 .collect(toMap(e -> e.getKey().substring(dottedPrefix.length()), Map.Entry::getValue, (s1, s2) -> s1));
-    }
-
-    public Flux<Map.Entry<String, String>> changes(String prefix) {
-        var dottedPrefix = prefix.endsWith(".") || prefix.isEmpty()
-                ? prefix
-                : prefix + ".";
-        return Flux.fromIterable(sources)
-                .flatMap(s -> s.changes().onErrorContinue((e, t) -> {
-                }))
-                .flatMapIterable(Function.identity())
-                .filter(key -> key.startsWith(dottedPrefix))
-                .map(key -> new AbstractMap.SimpleImmutableEntry<>(key.substring(dottedPrefix.length()), this.getProperty(key)));
     }
 
     public String getProperty(String key, String defaultValue) {
@@ -59,11 +40,7 @@ public class ApplicationProperties {
     }
 
     public String getRequiredProperty(String key) {
-        var property = getProperty(key);
-        if (property == null) {
-            throw new IllegalStateException(String.format("Required property %s was not found", key));
-        }
-        return property;
+        return Objects.requireNonNull(getProperty(key), String.format("Не удалось получить значение по ключу '%s'", key));
     }
 
     @Nullable

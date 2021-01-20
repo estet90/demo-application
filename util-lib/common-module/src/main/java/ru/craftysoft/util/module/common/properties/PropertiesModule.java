@@ -6,9 +6,14 @@ import dagger.multibindings.IntoSet;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import ru.craftysoft.util.module.common.properties.source.EnvironmentPropertySource;
+import ru.craftysoft.util.module.common.properties.source.PropertySource;
+import ru.craftysoft.util.module.common.properties.source.SystemPropertiesPropertySource;
+import ru.craftysoft.util.module.common.properties.source.YamlPropertySource;
 
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
+import java.util.Set;
 
 @Module
 public class PropertiesModule {
@@ -26,45 +31,43 @@ public class PropertiesModule {
         }
     }
 
-
     @Provides
     @Singleton
-    @IntoSet
-    static PropertySource providesEnvironmentPropertySourceIntoSet(EnvironmentPropertySource environmentPropertySource) {
-        return environmentPropertySource;
+    static ApplicationProperties applicationProperties(ConfigurationPropertiesSubscriber subscriber) {
+        return new ApplicationProperties(subscriber);
     }
 
     @Provides
     @Singleton
-    static EnvironmentPropertySource providesEnvironmentPropertySource() {
+    static ConfigurationPropertiesPublisher configurationPropertiesPublisher(ConfigurationPropertiesSubscriber subscriber,
+                                                                             Set<PropertySource> propertySources) {
+        return new ConfigurationPropertiesPublisher(subscriber, propertySources);
+    }
+
+    @Provides
+    @Singleton
+    static ConfigurationPropertiesSubscriber subscriber(Set<PropertySource> propertySources) {
+        return new ConfigurationPropertiesSubscriber(propertySources);
+    }
+
+    @Provides
+    @Singleton
+    @IntoSet
+    PropertySource providesYamlPropertySource() {
+        return new YamlPropertySource(this.configFileLocation);
+    }
+
+    @Provides
+    @Singleton
+    @IntoSet
+    static PropertySource providesEnvironmentPropertySource() {
         return new EnvironmentPropertySource();
     }
 
     @Provides
     @Singleton
-    public YamlPropertySource providesYamlPropertySource(EnvironmentPropertySource environmentPropertySource) {
-        var ps = new YamlPropertySource(this.configFileLocation);
-        YamlPropertySource.registerSignalHandler(ps);
-        return ps;
-    }
-
-    @Provides
-    @Singleton
     @IntoSet
-    static PropertySource providesYamlPropertySourceIntoSet(YamlPropertySource yamlPropertySource) {
-        return yamlPropertySource;
-    }
-
-    @Provides
-    @Singleton
-    static SystemPropertiesPropertySource providesSystemPropertiesPropertySource() {
+    static PropertySource providesSystemPropertiesPropertySource() {
         return new SystemPropertiesPropertySource();
-    }
-
-    @Provides
-    @Singleton
-    @IntoSet
-    static PropertySource providesSystemPropertiesPropertySourceIntoSet(SystemPropertiesPropertySource systemPropertiesPropertySource) {
-        return systemPropertiesPropertySource;
     }
 }

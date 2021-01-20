@@ -6,44 +6,34 @@ import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.encoder.PatternLayoutEncoder;
 import ch.qos.logback.classic.spi.Configurator;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.core.AsyncAppenderBase;
 import ch.qos.logback.core.ConsoleAppender;
 import ch.qos.logback.core.OutputStreamAppender;
 import ch.qos.logback.core.spi.ContextAwareBase;
 import org.slf4j.bridge.SLF4JBridgeHandler;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Optional;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.LogManager;
 
 public class LogbackConfigurator extends ContextAwareBase implements Configurator {
     private static final String CONSOLE_PATTERN = "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X] %logger{80} %msg%n";
-    public static final String ASYNC_ENABLED = System.getenv("LOGBACK_ASYNC");
-    private static Optional<AsyncAppender> ASYNC_APPENDER = Optional.empty();
+    private static final String ASYNC_ENABLED = System.getenv("LOGBACK_ASYNC");
+    public static final Level DEFAULT_LOG_LEVEL = Level.INFO;
 
     public LogbackConfigurator() {
-    }
-
-    public static void stop() {
-        ASYNC_APPENDER.ifPresent(AsyncAppenderBase::stop);
     }
 
     @Override
     public void configure(LoggerContext ctx) {
         var root = ctx.getLogger("ROOT");
-        root.setLevel(Level.INFO);
+        root.setLevel(DEFAULT_LOG_LEVEL);
         root.detachAndStopAllAppenders();
         this.configureJdkLoggingBridgeHandler();
-
-        var async = ASYNC_ENABLED.equalsIgnoreCase("true");
-
+        var async = "true".equalsIgnoreCase(ASYNC_ENABLED);
         if (async) {
             var asyncAppender = new AsyncAppender();
             asyncAppender.setName("console-async");
             asyncAppender.setContext(this.context);
-            ASYNC_APPENDER = Optional.of(asyncAppender);
-
             root.addAppender(asyncAppender);
             asyncAppender.addAppender(consoleAppender(ctx));
             asyncAppender.start();
@@ -58,7 +48,6 @@ public class LogbackConfigurator extends ContextAwareBase implements Configurato
         layout.setContext(ctx);
         layout.setCharset(StandardCharsets.UTF_8);
         layout.start();
-
         var appender = new ConsoleAppender<ILoggingEvent>();
         appender.setName("console");
         appender.setContext(ctx);

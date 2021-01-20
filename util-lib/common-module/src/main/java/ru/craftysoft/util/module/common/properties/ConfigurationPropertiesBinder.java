@@ -8,8 +8,6 @@ import java.util.Map;
 public interface ConfigurationPropertiesBinder<T> {
     void bind(T object, Map<String, String> properties);
 
-    void bind(T object, Map.Entry<String, String> properties);
-
     static int toInt(Map.Entry<String, String> entry, Integer defaultValue) {
         if (entry.getValue() == null && defaultValue == null) {
             throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());

@@ -1,4 +1,4 @@
-package ru.craftysoft.util.module.common.properties;
+package ru.craftysoft.util.module.common.properties.source;
 
 import org.snakeyaml.engine.v2.api.Load;
 import org.snakeyaml.engine.v2.api.LoadSettings;
@@ -25,22 +25,18 @@ public class YamlParser {
 
     }
 
-
     private static List<Map.Entry<String, String>> parseProperties(Object object) {
         if (object == null) {
             return List.of();
         }
-        if (object instanceof Map) {
-            @SuppressWarnings("unchecked")
-            var map = (Map<String, Object>) object;
+        if (object instanceof Map<?, ?> map) {
             return map.entrySet().stream()
                     .flatMap(entry -> YamlParser.parseProperties(entry.getValue()).stream()
                             .map(nestedEntry -> Map.entry(key(entry, nestedEntry), nestedEntry.getValue()))
                     )
                     .collect(Collectors.toList());
         }
-        if (object instanceof List) {
-            var list = (List<?>) object;
+        if (object instanceof List<?> list) {
             var result = new ArrayList<Map.Entry<String, String>>();
             int bound = list.size();
             for (int i = 0; i < bound; i++) {
@@ -51,9 +47,8 @@ public class YamlParser {
             }
             return result;
         }
-        if (object instanceof Set) {
+        if (object instanceof Set<?> set) {
             var result = new ArrayList<Map.Entry<String, String>>();
-            var set = (Set<?>) object;
             var iterator = set.iterator();
             for (int i = 0; iterator.hasNext(); i++) {
                 var value = iterator.next();

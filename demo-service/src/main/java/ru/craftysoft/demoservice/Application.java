@@ -16,15 +16,12 @@ public class Application {
                 .propertiesModule(new PropertiesModule(args))
                 .build();
         var configurationPropertiesPublisher = component.configurationPropertiesPublisher();
-        var refreshPropertiesScheduledTaskManager = component.refreshPropertiesScheduledTaskManager();
         var disposableServer = component.httpServer().bindNow();
         try {
             configurationPropertiesPublisher.start();
-            refreshPropertiesScheduledTaskManager.start();
             log.info("Application.main.start {}ms", System.currentTimeMillis() - startTimeMillis);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                 disposableServer.dispose();
-                refreshPropertiesScheduledTaskManager.stop();
                 configurationPropertiesPublisher.stop();
             }));
             disposableServer.onDispose()
@@ -32,7 +29,6 @@ public class Application {
         } catch (Exception e) {
             log.error("Application.main", e);
             disposableServer.dispose();
-            refreshPropertiesScheduledTaskManager.stop();
             configurationPropertiesPublisher.stop();
             throw e;
         }

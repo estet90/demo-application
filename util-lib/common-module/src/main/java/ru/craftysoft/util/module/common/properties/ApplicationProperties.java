@@ -10,23 +10,22 @@ import java.util.function.Function;
 import static java.util.stream.Collectors.toMap;
 
 @Slf4j
-public class ApplicationProperties {
-    private final ConfigurationPropertiesSubscriber subscriber;
+public class ApplicationProperties extends ConfigurationPropertiesSubscriber {
 
-    public ApplicationProperties(ConfigurationPropertiesSubscriber subscriber) {
-        this.subscriber = subscriber;
+    public ApplicationProperties(Map<String, String> initialProperties) {
+        super("*", log, initialProperties);
     }
 
     @Nullable
     public String getProperty(String key) {
-        return this.subscriber.getProperties().get(key);
+        return this.properties.get(key);
     }
 
     public Map<String, String> getProperties(String prefix) {
         var dottedPrefix = prefix.endsWith(".") || prefix.isEmpty()
                 ? prefix
                 : prefix + ".";
-        return this.subscriber.getProperties().entrySet().stream()
+        return this.properties.entrySet().stream()
                 .filter(property -> property.getKey().startsWith(prefix))
                 .collect(toMap(e -> e.getKey().substring(dottedPrefix.length()), Map.Entry::getValue, (s1, s2) -> s1));
     }

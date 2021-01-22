@@ -1,34 +1,33 @@
 package ru.craftysoft.util.module.common.properties;
 
-import lombok.extern.slf4j.Slf4j;
-import ru.craftysoft.util.module.common.properties.source.PropertySource;
+import org.slf4j.Logger;
 
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Flow;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.Comparator.comparing;
+import static java.util.Optional.ofNullable;
 
-@Slf4j
-public class ConfigurationPropertiesSubscriber implements Flow.Subscriber<Map<String, String>> {
+public abstract class ConfigurationPropertiesSubscriber implements Flow.Subscriber<Map<String, String>> {
 
-    private final Map<String, String> properties;
     private Flow.Subscription subscription;
+    private final String prefix;
+    protected final Logger logger;
+    protected final Map<String, String> properties;
 
-    public ConfigurationPropertiesSubscriber(Set<PropertySource> sources) {
-        //если не инициализировать, будут возникать ошибки
-        this.properties = sources.stream()
-                .sorted(comparing(PropertySource::priority).reversed())
-                .map(PropertySource::getProperties)
-                .flatMap(stringStringMap -> stringStringMap.entrySet().stream())
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, ConcurrentHashMap::new));
+    public ConfigurationPropertiesSubscriber(String prefix,
+                                             Logger logger,
+                                             Map<String, String> properties) {
+        this.prefix = prefix;
+        this.logger = logger;
+        this.properties = properties;
     }
 
-    public Map<String, String> getProperties() {
-        return this.properties;
+    protected void refresh(Map<String, String> propertiesToAdd, Set<String> propertiesToRemove) {
+        properties.putAll(propertiesToAdd);
+        propertiesToRemove.forEach(properties::remove);
     }
 
     @Override
@@ -38,36 +37,52 @@ public class ConfigurationPropertiesSubscriber implements Flow.Subscriber<Map<St
     }
 
     @Override
-    public void onNext(Map<String, String> item) {
-        var entries = item.entrySet();
-        var point = "ConfigurationPropertiesSubscriber.onNext";
-        var newProperties = entries.stream()
-                .filter(entry -> !this.properties.containsKey(entry.getKey()))
-                .peek(entry -> log.debug("{} новое свойство {}", point, entry));
-        var changedProperties = entries.stream()
-                .filter(e -> {
-                    var oldValue = this.properties.get(e.getKey());
-                    return oldValue != null && !oldValue.equals(e.getValue());
-                })
-                .peek(entry -> log.debug(
-                        "{} новое значение свойства {}: {} -> {}",
-                        point, entry.getKey(), properties.get(entry.getKey()), entry.getValue()
-                ));
-        var propertiesToAdd = Stream.concat(newProperties, changedProperties)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        this.properties.putAll(propertiesToAdd);
-        this.properties.keySet().stream()
-                .filter(key -> !item.containsKey(key))
-                .forEach(key -> {
-                    this.properties.remove(key);
-                    log.debug("{} удалено свойство {}", point, key);
-                });
+    public void onNext(Map<String, String> actualProperties) {
+        if (actualProperties.isEmpty()) {
+            this.subscription.request(1);
+            return;
+        }
+        var dottedPrefix = prefix == null || prefix.isEmpty() || prefix.equals("*") || prefix.endsWith(".")
+                ? prefix
+                : prefix + ".";
+        var propertiesToCheck = dottedPrefix == null || dottedPrefix.isEmpty() || dottedPrefix.equals("*")
+                ? actualProperties
+                : actualProperties.entrySet().stream()
+                .filter(entry -> entry.getKey().startsWith(prefix))
+                .collect(Collectors.toMap(entry -> entry.getKey().substring(dottedPrefix.length()), Map.Entry::getValue));
+        if (propertiesToCheck.isEmpty()) {
+            this.subscription.request(1);
+            return;
+        }
+        ofNullable(properties).ifPresentOrElse(properties -> {
+            var newProperties = propertiesToCheck.entrySet().stream()
+                    .filter(entry -> !properties.containsKey(entry.getKey()))
+                    .peek(entry -> logger.debug("onNext новое свойство {}", entry));
+            var changedProperties = propertiesToCheck.entrySet().stream()
+                    .filter(e -> {
+                        var oldValue = properties.get(e.getKey());
+                        return oldValue != null && !oldValue.equals(e.getValue());
+                    })
+                    .peek(entry -> logger.debug(
+                            "onNext новое значение свойства {}: {} -> {}",
+                            entry.getKey(), properties.get(entry.getKey()), entry.getValue()
+                    ));
+            var propertiesToAdd = Stream.concat(newProperties, changedProperties)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            var propertiesToRemove = properties.keySet().stream()
+                    .filter(key -> !propertiesToCheck.containsKey(key))
+                    .peek(key -> logger.debug("onNext свойство {} будет удалено", key))
+                    .collect(Collectors.toSet());
+            if (!propertiesToAdd.isEmpty() || !propertiesToRemove.isEmpty()) {
+                refresh(propertiesToAdd, propertiesToRemove);
+            }
+        }, () -> refresh(propertiesToCheck, Set.of()));
         this.subscription.request(1);
     }
 
     @Override
     public void onError(Throwable throwable) {
-        log.error("ConfigurationPropertiesSubscriber.onError", throwable);
+        logger.error("onError", throwable);
     }
 
     @Override

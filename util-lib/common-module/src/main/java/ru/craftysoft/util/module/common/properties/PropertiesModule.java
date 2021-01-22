@@ -13,7 +13,12 @@ import ru.craftysoft.util.module.common.properties.source.YamlPropertySource;
 
 import javax.annotation.Nullable;
 import javax.inject.Singleton;
+import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+
+import static java.util.Comparator.comparing;
 
 @Module
 public class PropertiesModule {
@@ -33,21 +38,27 @@ public class PropertiesModule {
 
     @Provides
     @Singleton
-    static ApplicationProperties applicationProperties(ConfigurationPropertiesSubscriber subscriber) {
-        return new ApplicationProperties(subscriber);
+    @IntoSet
+    static ConfigurationPropertiesSubscriber applicationPropertiesSubscriber(ApplicationProperties applicationProperties) {
+        return applicationProperties;
     }
 
     @Provides
     @Singleton
-    static ConfigurationPropertiesPublisher configurationPropertiesPublisher(ConfigurationPropertiesSubscriber subscriber,
+    static ApplicationProperties applicationProperties(Set<PropertySource> propertySources) {
+        var initialProperties = propertySources.stream()
+                .sorted(comparing(PropertySource::priority).reversed())
+                .map(PropertySource::getProperties)
+                .flatMap(stringStringMap -> stringStringMap.entrySet().stream())
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, ConcurrentHashMap::new));
+        return new ApplicationProperties(initialProperties);
+    }
+
+    @Provides
+    @Singleton
+    static ConfigurationPropertiesPublisher configurationPropertiesPublisher(Set<ConfigurationPropertiesSubscriber> subscribers,
                                                                              Set<PropertySource> propertySources) {
-        return new ConfigurationPropertiesPublisher(subscriber, propertySources);
-    }
-
-    @Provides
-    @Singleton
-    static ConfigurationPropertiesSubscriber subscriber(Set<PropertySource> propertySources) {
-        return new ConfigurationPropertiesSubscriber(propertySources);
+        return new ConfigurationPropertiesPublisher(subscribers, propertySources);
     }
 
     @Provides

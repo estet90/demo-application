@@ -1,7 +1,6 @@
 package ru.craftysoft.util.module.common.properties;
 
 import lombok.extern.slf4j.Slf4j;
-import ru.craftysoft.util.module.common.properties.annotation.Property;
 import ru.craftysoft.util.module.common.properties.source.PropertySource;
 
 import java.util.List;
@@ -16,14 +15,14 @@ import static java.util.Comparator.comparing;
 @Slf4j
 public class ConfigurationPropertiesPublisher {
 
-    private final ConfigurationPropertiesSubscriber subscriber;
+    private final Set<ConfigurationPropertiesSubscriber> subscribers;
     private final List<PropertySource> sources;
     private final ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
     private final AtomicBoolean isStarted = new AtomicBoolean(false);
     private final SubmissionPublisher<Map<String, String>> publisher = new SubmissionPublisher<>();
 
-    public ConfigurationPropertiesPublisher(ConfigurationPropertiesSubscriber subscriber, Set<PropertySource> sources) {
-        this.subscriber = subscriber;
+    public ConfigurationPropertiesPublisher(Set<ConfigurationPropertiesSubscriber> subscribers, Set<PropertySource> sources) {
+        this.subscribers = subscribers;
         this.sources = sources.stream()
                 .sorted(comparing(PropertySource::priority).reversed())
                 .collect(Collectors.toList());
@@ -31,14 +30,14 @@ public class ConfigurationPropertiesPublisher {
 
     public void start() {
         if (this.isStarted.compareAndSet(false, true)) {
-            publisher.subscribe(subscriber);
+            subscribers.forEach(publisher::subscribe);
             executorService.scheduleAtFixedRate(() -> {
                 var properties = this.sources.stream()
                         .map(PropertySource::getProperties)
                         .flatMap(stringStringMap -> stringStringMap.entrySet().stream())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, ConcurrentHashMap::new));
                 publisher.submit(properties);
-            }, 0, 2, TimeUnit.SECONDS);
+            }, 0, 10, TimeUnit.SECONDS);
             log.info("ConfigurationPropertiesPublisher.start");
         }
     }

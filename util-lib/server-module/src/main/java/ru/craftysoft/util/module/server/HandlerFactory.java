@@ -2,6 +2,7 @@ package ru.craftysoft.util.module.server;
 
 import io.netty.buffer.Unpooled;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,13 +10,14 @@ import reactor.core.publisher.Mono;
 import reactor.netty.ByteBufFlux;
 import reactor.netty.http.server.HttpServerRequest;
 import reactor.netty.http.server.HttpServerResponse;
+import reactor.util.context.Context;
 
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
+import java.util.Map;
 import java.util.function.BiFunction;
 
-import static ru.craftysoft.util.module.common.logging.MdcKey.REQUEST_ID;
-import static ru.craftysoft.util.module.common.reactor.MdcUtils.appendMdc;
+import static java.util.Optional.ofNullable;
+import static ru.craftysoft.util.module.common.reactor.MdcUtils.contextWithMdc;
 
 @Slf4j
 public class HandlerFactory {
@@ -30,7 +32,7 @@ public class HandlerFactory {
                     return processor.apply(request, bytes).flatMap(rs -> buildResponse(response, rs));
                 })
                 .doOnError(e -> log.error("HandlerFactory.handleMono.thrown", e))
-                .contextWrite(appendMdc(REQUEST_ID, UUID.randomUUID().toString()));
+                .contextWrite(context -> buildContext(request, context));
     }
 
     public BiFunction<HttpServerRequest, HttpServerResponse, ? extends Publisher<Void>> handle(BiFunction<HttpServerRequest, byte[], HttpResponse> processor) {
@@ -41,7 +43,19 @@ public class HandlerFactory {
                     return buildResponse(response, httpResponse);
                 })
                 .doOnError(e -> log.error("HandlerFactory.handle.thrown", e))
-                .contextWrite(appendMdc(REQUEST_ID, UUID.randomUUID().toString()));
+                .contextWrite(context -> buildContext(request, context));
+    }
+
+    private Context buildContext(HttpServerRequest request, Context context) {
+        var headers = request.requestHeaders();
+        var traceId = ofNullable(headers.get("X-B3-TraceId")).orElseGet(() -> RandomStringUtils.random(16, true, true));
+        var spanId = RandomStringUtils.random(16, true, true);
+        var parentSpanId = ofNullable(headers.get("X-B3-SpanId")).orElse("null");
+        return contextWithMdc(Map.of(
+                "traceId", traceId,
+                "spanId", spanId,
+                "parentSpanId", parentSpanId
+        ), context);
     }
 
     private Mono<byte[]> extractBody(HttpServerRequest request) {

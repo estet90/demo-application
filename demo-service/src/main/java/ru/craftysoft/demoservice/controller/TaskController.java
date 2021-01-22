@@ -11,9 +11,11 @@ import ru.craftysoft.demoservice.model.Task;
 import ru.craftysoft.error.exception.BaseException;
 import ru.craftysoft.error.exception.ValidationException;
 import ru.craftysoft.util.module.common.json.Jackson;
+import ru.craftysoft.util.module.common.properties.annotation.Property;
 import ru.craftysoft.util.module.server.HttpResponse;
 
 import javax.inject.Inject;
+import javax.inject.Named;
 import javax.inject.Singleton;
 import java.util.ArrayList;
 import java.util.Map;
@@ -37,7 +39,8 @@ public class TaskController {
     private final Jackson jackson;
 
     @Inject
-    public TaskController(GetAllTasksByUserIdOperation getAllTasksByUserIdOperation,
+    public TaskController(@Property(value = "test", defaultValue = "3") @Named("test") int test,
+                          GetAllTasksByUserIdOperation getAllTasksByUserIdOperation,
                           AddTaskToUserOperation addTaskToUserOperation,
                           Jackson jackson) {
         this.getAllTasksByUserIdOperation = getAllTasksByUserIdOperation;

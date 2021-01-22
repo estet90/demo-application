@@ -1,4 +1,4 @@
-package ru.craftysoft.util.module.common;
+package ru.craftysoft.util.module.common.task;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -37,7 +37,7 @@ public class ScheduledTaskManager {
                 if (!this.scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS)) {
                     this.scheduledExecutorService.shutdownNow();
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 log.error("ScheduledTaskManager.stop.thrown", e);
             }
             log.info("ScheduledTaskManager.stop");

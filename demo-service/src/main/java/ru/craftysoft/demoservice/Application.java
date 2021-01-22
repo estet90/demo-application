@@ -9,7 +9,7 @@ import ru.craftysoft.util.module.common.reactor.ReactorMdc;
 public class Application {
 
     public static void main(String[] args) {
-        ReactorMdc.init("demo-service");
+        ReactorMdc.init();
         new ExceptionFactory("0001");
         var startTimeMillis = System.currentTimeMillis();
         var component = DaggerApplicationComponent.builder()

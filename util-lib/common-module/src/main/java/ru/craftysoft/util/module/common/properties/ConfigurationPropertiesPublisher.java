@@ -1,6 +1,7 @@
 package ru.craftysoft.util.module.common.properties;
 
 import lombok.extern.slf4j.Slf4j;
+import ru.craftysoft.util.module.common.properties.annotation.Property;
 import ru.craftysoft.util.module.common.properties.source.PropertySource;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class ConfigurationPropertiesPublisher {
                         .flatMap(stringStringMap -> stringStringMap.entrySet().stream())
                         .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v2, ConcurrentHashMap::new));
                 publisher.submit(properties);
-            }, 0, 5, TimeUnit.SECONDS);
+            }, 0, 2, TimeUnit.SECONDS);
             log.info("ConfigurationPropertiesPublisher.start");
         }
     }
@@ -50,7 +51,7 @@ public class ConfigurationPropertiesPublisher {
                 if (!this.executorService.awaitTermination(10, TimeUnit.SECONDS)) {
                     this.executorService.shutdownNow();
                 }
-            } catch (InterruptedException e) {
+            } catch (Exception e) {
                 log.error("ConfigurationPropertiesPublisher.stop.thrown", e);
             }
             log.info("ConfigurationPropertiesPublisher.stop");

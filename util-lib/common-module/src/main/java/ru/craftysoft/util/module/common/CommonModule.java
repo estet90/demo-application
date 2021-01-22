@@ -5,6 +5,7 @@ import dagger.Provides;
 import ru.craftysoft.util.module.common.properties.ApplicationProperties;
 import ru.craftysoft.util.module.common.properties.ConfigurationPropertiesRefresher;
 import ru.craftysoft.util.module.common.properties.PropertiesModule;
+import ru.craftysoft.util.module.common.task.ScheduledTaskManager;
 
 import javax.annotation.Nonnull;
 import javax.inject.Named;
@@ -39,7 +40,7 @@ public class CommonModule {
     static ScheduledTaskManager refreshPropertiesScheduledTaskManager(@Named("refreshPropertiesExecutor") ScheduledExecutorService refreshPropertiesExecutor,
                                                                       Set<ConfigurationPropertiesRefresher<?>> refreshers) {
         Set<Runnable> refresh = Set.of(() -> refreshers.forEach(ConfigurationPropertiesRefresher::refresh));
-        return new ScheduledTaskManager(refreshPropertiesExecutor, 5, refresh);
+        return new ScheduledTaskManager(refreshPropertiesExecutor, 2, refresh);
     }
 
     @Provides

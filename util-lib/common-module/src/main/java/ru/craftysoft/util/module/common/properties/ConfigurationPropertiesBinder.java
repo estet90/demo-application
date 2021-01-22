@@ -1,122 +1,75 @@
 package ru.craftysoft.util.module.common.properties;
 
-import reactor.util.function.Tuple2;
-import reactor.util.function.Tuples;
-
 import java.util.Map;
 
+import static java.util.Optional.ofNullable;
+
 public interface ConfigurationPropertiesBinder<T> {
+
+    String DEFAULT_NO_VALUE_ERROR_MESSAGE = "Невозможно выполнить преобразование, ни одно значение не задано";
+
     void bind(T object, Map<String, String> properties);
 
-    static int toInt(Map.Entry<String, String> entry, Integer defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
+    static Integer toInt(String value, Integer defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return Integer.parseInt(entry.getValue());
+        return ofNullable(value).map(Integer::parseInt).orElse(defaultValue);
     }
 
-    static Integer toInt(Map.Entry<String, String> entry) {
-        if (entry.getValue() == null) {
-            return null;
-        }
-        return Integer.parseInt(entry.getValue());
+    static Integer toInt(String value) {
+        return ofNullable(value).map(Integer::parseInt).orElse(null);
     }
 
-    static long toLong(Map.Entry<String, String> entry, Long defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
+    static Long toLong(String value, Long defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return Long.parseLong(entry.getValue());
+        return ofNullable(value).map(Long::parseLong).orElse(defaultValue);
     }
 
-    static Long toLong(Map.Entry<String, String> entry) {
-        if (entry.getValue() == null) {
-            return null;
-        }
-        return Long.parseLong(entry.getValue());
+    static Long toLong(String value) {
+        return ofNullable(value).map(Long::parseLong).orElse(null);
     }
 
 
-    static boolean toBoolean(Map.Entry<String, String> entry, Boolean defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
+    static Boolean toBoolean(String value, Boolean defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return Boolean.parseBoolean(entry.getValue());
+        return ofNullable(value).map(Boolean::parseBoolean).orElse(defaultValue);
     }
 
-    static Boolean toBoolean(Map.Entry<String, String> entry) {
-        if (entry.getValue() == null) {
-            return null;
-        }
-        return Boolean.parseBoolean(entry.getValue());
+    static Boolean toBoolean(String value) {
+        return ofNullable(value).map(Boolean::parseBoolean).orElse(null);
     }
 
-    static float toFloat(Map.Entry<String, String> entry, Float defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
+    static Float toFloat(String value, Float defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return Float.parseFloat(entry.getValue());
+        return ofNullable(value).map(Float::parseFloat).orElse(defaultValue);
     }
 
-    static Float toFloat(Map.Entry<String, String> entry) {
-        if (entry.getValue() == null) {
-            return null;
-        }
-        return Float.parseFloat(entry.getValue());
+    static Float toFloat(String value) {
+        return ofNullable(value).map(Float::parseFloat).orElse(null);
     }
 
-    static double toDouble(Map.Entry<String, String> entry, Double defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
+    static Double toDouble(String value, Double defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return Double.parseDouble(entry.getValue());
+        return ofNullable(value).map(Double::parseDouble).orElse(defaultValue);
     }
 
-    static Double toDouble(Map.Entry<String, String> entry) {
-        if (entry.getValue() == null) {
-            return null;
+    static Double toDouble(String value) {
+        return ofNullable(value).map(Double::parseDouble).orElse(null);
+    }
+
+    static String toString(String value, String defaultValue) {
+        if (value == null && defaultValue == null) {
+            throw new IllegalArgumentException(DEFAULT_NO_VALUE_ERROR_MESSAGE);
         }
-        return Double.parseDouble(entry.getValue());
-    }
-
-    static String toString(Map.Entry<String, String> entry) {
-        return entry.getValue();
-    }
-
-    static String toString(Map.Entry<String, String> entry, String defaultValue) {
-        if (entry.getValue() == null && defaultValue == null) {
-            throw new IllegalArgumentException("Can't set to null property without default value. Key: " + entry.getKey());
-        }
-        if (entry.getValue() == null) {
-            return defaultValue;
-        }
-        return entry.getValue();
-    }
-
-    static Tuple2<String, Map.Entry<String, String>> subEntry(Map.Entry<String, String> entry) {
-        var parts = entry.getKey().split("\\.");
-        var firstPart = parts[0];
-        var otherParts = String.join(".", java.util.Arrays.copyOfRange(parts, 1, parts.length));
-        var newEntry = new java.util.AbstractMap.SimpleImmutableEntry<>(otherParts, entry.getValue());
-        return Tuples.of(firstPart, newEntry);
-    }
-
-    static boolean hasParts(Map.Entry<String, String> entry) {
-        return entry.getKey().contains(".");
+        return ofNullable(value).orElse(defaultValue);
     }
 }

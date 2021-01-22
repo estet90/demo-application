@@ -4,8 +4,9 @@ import dagger.Component;
 import reactor.netty.http.server.HttpServer;
 import ru.craftysoft.demoservice.module.DbModule;
 import ru.craftysoft.demoservice.module.ServerModule;
+import ru.craftysoft.generated.PropertyBindModule;
 import ru.craftysoft.util.module.common.CommonModule;
-import ru.craftysoft.util.module.common.ScheduledTaskManager;
+import ru.craftysoft.util.module.common.task.ScheduledTaskManager;
 import ru.craftysoft.util.module.common.json.JacksonModule;
 import ru.craftysoft.util.module.common.logging.LogbackModule;
 import ru.craftysoft.util.module.common.properties.ConfigurationPropertiesPublisher;
@@ -20,6 +21,7 @@ import javax.inject.Singleton;
 
         DbModule.class,
         ServerModule.class,
+        PropertyBindModule.class,
 })
 @Singleton
 public interface ApplicationComponent {

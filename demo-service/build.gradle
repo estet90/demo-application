@@ -21,10 +21,10 @@ dependencies {
             "org.mockito:mockito-core:3.6.28",
     )
     [
+            project(":util-lib:common-module"),
             "com.google.dagger:dagger-compiler:2.31.1",
             "org.projectlombok:lombok:1.18.16",
             "org.hibernate.validator:hibernate-validator-annotation-processor:7.0.0.Final",
-            project(":util-lib:common-module")
     ].forEach {
         annotationProcessor(it)
         testAnnotationProcessor(it)

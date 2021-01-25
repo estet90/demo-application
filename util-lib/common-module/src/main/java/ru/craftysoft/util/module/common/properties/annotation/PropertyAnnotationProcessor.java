@@ -5,6 +5,7 @@ import dagger.Module;
 import dagger.Provides;
 import ru.craftysoft.util.module.common.properties.ApplicationProperties;
 
+import javax.annotation.Nullable;
 import javax.annotation.processing.AbstractProcessor;
 import javax.annotation.processing.RoundEnvironment;
 import javax.inject.Named;
@@ -16,12 +17,11 @@ import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.TypeMirror;
 import java.io.IOException;
 import java.lang.annotation.Annotation;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+
+import static java.util.Optional.ofNullable;
 
 public class PropertyAnnotationProcessor extends AbstractProcessor {
-
-    public static final String BINDER_FULL_CLASS_NAME = "ru.craftysoft.util.module.common.properties.ConfigurationPropertiesBinder";
 
     @Override
     public Set<String> getSupportedAnnotationTypes() {
@@ -38,15 +38,129 @@ public class PropertyAnnotationProcessor extends AbstractProcessor {
         if (annotations.isEmpty()) {
             return false;
         }
-        var classes = new HashSet<Class<? extends Annotation>>();
-        for (var className : getSupportedAnnotationTypes()) {
-            try {
-                var clazz = Class.forName(className);
-                classes.add((Class<? extends Annotation>) clazz);
-            } catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+        var classes = Set.of(Property.class, Named.class);
+        var holders = resolveMetaDataHolders(roundEnv, classes);
+        if (!holders.isEmpty()) {
+            var doublePropertyBindModuleClassName = "DoublePropertyBindModule.class";
+            var floatPropertyBindModuleClassName = "FloatPropertyBindModule.class";
+            var intPropertyBindModuleClassName = "IntPropertyBindModule.class";
+            var longPropertyBindModuleClassName = "LongPropertyBindModule.class";
+            var booleanPropertyBindModuleClassName = "BooleanPropertyBindModule.class";
+            var stringPropertyBindModuleClassName = "StringPropertyBindModule.class";
+            var builders = Map.of(
+                    stringPropertyBindModuleClassName, createModuleBuilder("StringPropertyBindModule"),
+                    intPropertyBindModuleClassName, createModuleBuilder("IntPropertyBindModule"),
+                    longPropertyBindModuleClassName, createModuleBuilder("LongPropertyBindModule"),
+                    floatPropertyBindModuleClassName, createModuleBuilder("FloatPropertyBindModule"),
+                    doublePropertyBindModuleClassName, createModuleBuilder("DoublePropertyBindModule"),
+                    booleanPropertyBindModuleClassName, createModuleBuilder("BooleanPropertyBindModule")
+            );
+            var nameValueMap = new HashMap<String, String>();
+            holders.forEach(holder -> {
+                var returnedType = holder.element.asType();
+                if (!isPrimitive(returnedType)) {
+                    throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + returnedType);
+                }
+                var propertyAnnotation = extractAnnotationByClass(holder, Property.class);
+                var propertyAnnotationValue = propertyAnnotation.value();
+                if (propertyAnnotationValue.isBlank()) {
+                    throw new IllegalArgumentException("Значение Property.value не может быть пустым");
+                }
+                var namedAnnotation = extractAnnotationByClass(holder, Named.class);
+                var namedAnnotationValue = namedAnnotation.value();
+                var nameValueMapKey = resolveTypeForCheck(returnedType) + namedAnnotationValue;
+                var existingPropertyAnnotationValue = nameValueMap.get(nameValueMapKey);
+                if (existingPropertyAnnotationValue == null) {
+                    var propertyWithValuePathParts = propertyAnnotationValue.split(":", 2);
+                    var valuePath = propertyWithValuePathParts[0];
+                    var defaultValue = resolveDefaultValue(holder, propertyAnnotationValue, propertyWithValuePathParts);
+                    var propertiesParameterName = "properties";
+                    var extractPropertyString = ofNullable(defaultValue)
+                            .map(dv -> convertPrimitive(returnedType, String.format("%s.getProperty(\"%s\")", propertiesParameterName, valuePath), dv))
+                            .orElseGet(() -> convertPrimitive(returnedType, String.format("%s.getProperty(\"%s\")", propertiesParameterName, valuePath)));
+                    var methodSpec = createMethod(returnedType, propertyAnnotation, namedAnnotationValue, extractPropertyString, propertiesParameterName);
+                    var moduleBuilder = switch (returnedType.toString()) {
+                        case "double", "java.lang.Double" -> builders.get(doublePropertyBindModuleClassName);
+                        case "float", "java.lang.Float" -> builders.get(floatPropertyBindModuleClassName);
+                        case "int", "java.lang.Integer" -> builders.get(intPropertyBindModuleClassName);
+                        case "long", "java.lang.Long" -> builders.get(longPropertyBindModuleClassName);
+                        case "boolean", "java.lang.Boolean" -> builders.get(booleanPropertyBindModuleClassName);
+                        case "java.lang.String" -> builders.get(stringPropertyBindModuleClassName);
+                        default -> throw new IllegalArgumentException(); //этого никогда не случится
+                    };
+                    moduleBuilder.addMethod(methodSpec);
+                } else if (!existingPropertyAnnotationValue.equals(propertyAnnotationValue)) {
+                    throw new IllegalArgumentException(String.format("Невозможно передать 2 разных значения в одну и ту же переменную '%s' типа '%s'", namedAnnotationValue, returnedType));
+                }
+                nameValueMap.put(nameValueMapKey, propertyAnnotationValue);
+            });
+            writeFiles(builders);
         }
+        return true;
+    }
+
+    private void writeFiles(Map<String, TypeSpec.Builder> builders) {
+        try {
+            var includedModulesClassNames = new StringJoiner(",", "{", "}");
+            for (var entry : builders.entrySet()) {
+                if (!entry.getValue().methodSpecs.isEmpty()) {
+                    includedModulesClassNames.add(entry.getKey());
+                    writeFile(entry.getValue());
+                }
+            }
+            var propertyBindModuleBuilder = TypeSpec
+                    .classBuilder("PropertyBindModule")
+                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                    .addAnnotation(AnnotationSpec.builder(Module.class)
+                            .addMember("includes", includedModulesClassNames.toString())
+                            .build());
+            writeFile(propertyBindModuleBuilder);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private void writeFile(TypeSpec.Builder propertyBindModuleBuilder) throws IOException {
+        JavaFile.builder("ru.craftysoft.generated", propertyBindModuleBuilder.build())
+                .addStaticImport(ConfigurationPropertiesBinder.class, "*")
+                .build()
+                .writeTo(processingEnv.getFiler());
+    }
+
+    private MethodSpec createMethod(TypeMirror returnedType,
+                                    Property propertyAnnotation,
+                                    String namedAnnotationValue,
+                                    String extractPropertyString,
+                                    String propertiesParameterName) {
+        var methodSpecBuilder = MethodSpec.methodBuilder(namedAnnotationValue)
+                .addModifiers(Modifier.STATIC)
+                .addAnnotation(Provides.class)
+                .addAnnotation(Singleton.class)
+                .addAnnotation(AnnotationSpec.builder(Named.class)
+                        .addMember("value", "\"" + namedAnnotationValue + "\"")
+                        .build())
+                .addParameter(ParameterSpec.builder(ApplicationProperties.class, propertiesParameterName).build())
+                .returns(TypeName.get(returnedType));
+        methodSpecBuilder.addStatement("var result = " + extractPropertyString);
+        if (propertyAnnotation.required()) {
+            methodSpecBuilder.addStatement(String.format("""
+                    if (result == null) {
+                        throw new NullPointerException("Не удалось получить значение по ключу '%s'");
+                    }""", propertyAnnotation.value()));
+        }
+        methodSpecBuilder.addStatement("return result");
+        return methodSpecBuilder.build();
+    }
+
+    private <T extends Annotation> T extractAnnotationByClass(MetaDataHolder holder, Class<T> clazz) {
+        return holder.annotations.stream()
+                .filter(annotation -> annotation.annotationType().equals(clazz))
+                .findFirst()
+                .map(clazz::cast)
+                .orElseThrow();
+    }
+
+    private HashSet<MetaDataHolder> resolveMetaDataHolders(RoundEnvironment roundEnv, Set<Class<? extends Annotation>> classes) {
         var holders = new HashSet<MetaDataHolder>();
         elementsLoop:
         for (var element : roundEnv.getElementsAnnotatedWithAny(classes)) {
@@ -65,122 +179,74 @@ public class PropertyAnnotationProcessor extends AbstractProcessor {
                 holders.add(new MetaDataHolder(element, annotationsOnElement));
             }
         }
-        System.out.println(holders);
-        if (!holders.isEmpty()) {
-            var propertyBindModuleBuilder = TypeSpec
-                    .classBuilder("PropertyBindModule")
-                    .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
-                    .addAnnotation(Module.class);
-            var allElements = processingEnv.getElementUtils();
-            var applicationPropertiesTypeName = TypeName.get(allElements.getTypeElement(ApplicationProperties.class.getName()).asType());
-            holders.forEach(holder -> {
-                if (!isPrimitive(holder.element().asType())) {
-                    throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + holder.element().asType());
-                }
-                var namedAnnotation = holder.annotations.stream()
-                        .filter(annotation -> annotation.annotationType().equals(Named.class))
-                        .findFirst()
-                        .map(Named.class::cast)
-                        .orElseThrow();
-                var propertyAnnotation = holder.annotations.stream()
-                        .filter(annotation -> annotation.annotationType().equals(Property.class))
-                        .findFirst()
-                        .map(Property.class::cast)
-                        .orElseThrow();
-                var methodSpecBuilder = MethodSpec.methodBuilder(namedAnnotation.value())
-                        .addAnnotation(Provides.class)
-                        .addAnnotation(Singleton.class)
-                        .addAnnotation(AnnotationSpec.builder(Named.class)
-                                .addMember("value", "\"" + namedAnnotation.value() + "\"")
-                                .build())
-                        .addParameter(ParameterSpec.builder(applicationPropertiesTypeName, "properties").build())
-                        .returns(TypeName.get(holder.element.asType()));
-                String extractPropertyString;
-                if (!propertyAnnotation.defaultValue().equals("")) {
-                    extractPropertyString = convertPrimitive(holder.element.asType(), String.format("properties.getProperty(\"%s\")", propertyAnnotation.value()), propertyAnnotation.defaultValue());
-                } else {
-                    extractPropertyString = convertPrimitive(holder.element.asType(), String.format("properties.getProperty(\"%s\")", propertyAnnotation.value()));
-                }
-                methodSpecBuilder.addStatement("var result = " + extractPropertyString);
-                if (propertyAnnotation.required()) {
-                    methodSpecBuilder.addStatement(String.format("""
-                            if (result == null) {
-                                throw new NullPointerException("Не удалось получить значение по ключу '%s'");
-                            }""", propertyAnnotation.value()));
-                }
-                methodSpecBuilder.addStatement("return result");
-                propertyBindModuleBuilder
-                        .addMethod(methodSpecBuilder.build());
-            });
-            try {
-                JavaFile.builder("ru.craftysoft.generated", propertyBindModuleBuilder.build())
-                        .build()
-                        .writeTo(processingEnv.getFiler());
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-        return true;
+        return holders;
     }
 
-    private record MetaDataHolder(Element element, Set<? extends Annotation> annotations) {
+    private TypeSpec.Builder createModuleBuilder(String stringPropertyBindModule) {
+        return TypeSpec
+                .classBuilder(stringPropertyBindModule)
+                .addModifiers(Modifier.PUBLIC, Modifier.FINAL)
+                .addAnnotation(Module.class);
+    }
+
+    @Nullable
+    private String resolveDefaultValue(MetaDataHolder holder, String valueWithDefaultPath, String[] propertyWithValuePathParts) {
+        if (propertyWithValuePathParts.length == 2) {
+            return propertyWithValuePathParts[1];
+        }
+        if (propertyWithValuePathParts.length == 1 && valueWithDefaultPath.contains(":")) {
+            if (holder.element().asType().toString().equals("java.lang.String")) {
+                return "";
+            } else {
+                throw new IllegalArgumentException("Пустое значение не может быть значением по умолчанию для типа " + holder.element().asType());
+            }
+        }
+        return null;
     }
 
     private boolean isPrimitive(TypeMirror type) {
-        return switch (type.toString()) {
-            case "float", "java.lang.Float",
-                    "double", "java.lang.Double",
-                    "int", "java.lang.Integer",
-                    "long", "java.lang.Long",
-                    "boolean", "java.lang.Boolean",
-                    "java.lang.String" -> true;
+        return switch (type.getKind()) {
+            case DOUBLE, FLOAT, INT, LONG, BOOLEAN, CHAR -> true;
             default -> false;
         };
     }
 
+    private Class<?> resolveTypeForCheck(TypeMirror type) {
+        return switch (type.getKind()) {
+            case DOUBLE -> Double.class;
+            case FLOAT -> Float.class;
+            case INT -> Integer.class;
+            case LONG -> Long.class;
+            case BOOLEAN -> Boolean.class;
+            case CHAR -> String.class;
+            default -> throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + type);
+        };
+    }
+
     private String convertPrimitive(TypeMirror type, String propertyExtractExpression) {
-        switch (type.toString()) {
-            case "double":
-            case "java.lang.Double":
-                return BINDER_FULL_CLASS_NAME + ".toDouble(" + propertyExtractExpression + ")";
-            case "float":
-            case "java.lang.Float":
-                return BINDER_FULL_CLASS_NAME + ".toFloat(" + propertyExtractExpression + ")";
-            case "int":
-            case "java.lang.Integer":
-                return BINDER_FULL_CLASS_NAME + ".toInt(" + propertyExtractExpression + ")";
-            case "long":
-            case "java.lang.Long":
-                return BINDER_FULL_CLASS_NAME + ".toLong(" + propertyExtractExpression + ")";
-            case "boolean":
-            case "java.lang.Boolean":
-                return BINDER_FULL_CLASS_NAME + ".toBoolean(" + propertyExtractExpression + ")";
-            case "java.lang.String":
-                return propertyExtractExpression;
-        }
-        throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + type);
+        return switch (type.getKind()) {
+            case DOUBLE -> "toDouble(" + propertyExtractExpression + ")";
+            case FLOAT -> "toFloat(" + propertyExtractExpression + ")";
+            case INT -> "toInt(" + propertyExtractExpression + ")";
+            case LONG -> "toLong(" + propertyExtractExpression + ")";
+            case BOOLEAN -> "toBoolean(" + propertyExtractExpression + ")";
+            case CHAR -> propertyExtractExpression;
+            default -> throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + type);
+        };
     }
 
     private static String convertPrimitive(TypeMirror type, String propertyExtractExpression, String defaultValue) {
-        switch (type.toString()) {
-            case "double":
-            case "java.lang.Double":
-                return BINDER_FULL_CLASS_NAME + ".toDouble(" + propertyExtractExpression + ", " + BINDER_FULL_CLASS_NAME + ".toDouble(\"" + defaultValue + "\"))";
-            case "float":
-            case "java.lang.Float":
-                return BINDER_FULL_CLASS_NAME + ".toFloat(" + propertyExtractExpression + ", " + BINDER_FULL_CLASS_NAME + ".toFloat(\"" + defaultValue + "\"))";
-            case "int":
-            case "java.lang.Integer":
-                return BINDER_FULL_CLASS_NAME + ".toInt(" + propertyExtractExpression + ", " + BINDER_FULL_CLASS_NAME + ".toInt(\"" + defaultValue + "\"))";
-            case "long":
-            case "java.lang.Long":
-                return BINDER_FULL_CLASS_NAME + ".toLong(" + propertyExtractExpression + ", " + BINDER_FULL_CLASS_NAME + ".toLong(\"" + defaultValue + "\"))";
-            case "boolean":
-            case "java.lang.Boolean":
-                return BINDER_FULL_CLASS_NAME + ".toBoolean(" + propertyExtractExpression + ", " + BINDER_FULL_CLASS_NAME + ".toBoolean(\"" + defaultValue + "\"))";
-            case "java.lang.String":
-                return BINDER_FULL_CLASS_NAME + ".toString(" + propertyExtractExpression + ", \"" + defaultValue + "\")";
-        }
-        throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + type);
+        return switch (type.getKind()) {
+            case DOUBLE -> "toDouble(" + propertyExtractExpression + ", " + "toDouble(\"" + defaultValue + "\"))";
+            case FLOAT -> "toFloat(" + propertyExtractExpression + ", " + "toFloat(\"" + defaultValue + "\"))";
+            case INT -> "toInt(" + propertyExtractExpression + ", " + "toInt(\"" + defaultValue + "\"))";
+            case LONG -> "toLong(" + propertyExtractExpression + ", " + "toLong(\"" + defaultValue + "\"))";
+            case BOOLEAN -> "toBoolean(" + propertyExtractExpression + ", " + "toBoolean(\"" + defaultValue + "\"))";
+            case CHAR -> "toString(" + propertyExtractExpression + ", \"" + defaultValue + "\")";
+            default -> throw new IllegalArgumentException("Невозможно выполнить преобразование для типа " + type);
+        };
+    }
+
+    private record MetaDataHolder(Element element, Set<? extends Annotation> annotations) {
     }
 }

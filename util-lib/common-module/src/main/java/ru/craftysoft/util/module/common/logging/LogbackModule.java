@@ -20,7 +20,6 @@ import static ru.craftysoft.util.module.common.logging.LogbackConfigurator.DEFAU
 @Module
 @Slf4j
 public class LogbackModule {
-
     @Singleton
     @Provides
     @IntoSet
@@ -49,38 +48,4 @@ public class LogbackModule {
             }
         };
     }
-
-//    @Singleton
-//    @Provides
-//    @IntoSet
-//    static ConfigurationPropertiesRefresher<?> logLevelRefresher(ApplicationProperties applicationProperties) {
-//        return new ConfigurationPropertiesRefresher<>("logging.level.", null, applicationProperties, new ConfigurationPropertiesBinder<>() {
-//            private final LoggerContext ctx = (LoggerContext) LoggerFactory.getILoggerFactory();
-//            private final Map<String, String> logLevels = new HashMap<>();
-//
-//            @Override
-//            public synchronized void bind(Object object, Map<String, String> newLogLevels) {
-//                if (logLevels.equals(newLogLevels)) {
-//                    return;
-//                }
-//                logLevels.keySet().forEach(logger -> {
-//                    if (!newLogLevels.containsKey(logger)) {
-//                        ctx.getLogger(logger).setLevel(DEFAULT_LOG_LEVEL);
-//                        log.debug("LogbackModule.bind изменён уровень логирования {} {} -> {}", logger, logLevels.get(logger), DEFAULT_LOG_LEVEL);
-//                        logLevels.remove(logger);
-//                    }
-//                });
-//                newLogLevels.entrySet().forEach(this::applyLevel);
-//                logLevels.putAll(newLogLevels);
-//            }
-//
-//            private void applyLevel(Map.Entry<String, String> logLevel) {
-//                var logger = logLevel.getKey();
-//                var level = ofNullable(logLevel.getValue()).map(String::toUpperCase).map(Level::toLevel).orElse(null);
-//                var oldLevel = ctx.getLogger(logger).getLevel();
-//                ctx.getLogger(logger).setLevel(level);
-//                log.debug("LogbackModule.bind изменён уровень логирования {} {} -> {}", logger, oldLevel, level);
-//            }
-//        });
-//    }
 }

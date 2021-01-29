@@ -3,9 +3,63 @@ info:
   title: demo-service
   version: 1.0.0
 servers:
-  - url: /demo-service/api/v1
+  - url: http://localhost:8080
 
 paths:
+  /users:
+    post:
+      operationId: addUser
+      requestBody:
+        content:
+          application/json;charset=UTF-8:
+            schema:
+              $ref: '#/components/schemas/User'
+      responses:
+        200:
+          description: Успех
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/ResultWithId'
+        default:
+          description: Ошибка
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /users/{id}:
+    get:
+      operationId: getUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        200:
+          description: Успех
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/User'
+        default:
+          description: Ошибка
+          content:
+            application/json;charset=UTF-8:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      operationId: deleteUser
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        202:
+          description: Успех
   /users/{id}/tasks:
     get:
       operationId: getAllTasksByUserId
@@ -14,7 +68,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: integer
       responses:
         200:
           description: Успех
@@ -35,7 +89,7 @@ paths:
           in: path
           required: true
           schema:
-            type: string
+            type: integer
       requestBody:
         content:
           application/json;charset=UTF-8:
@@ -47,7 +101,7 @@ paths:
           content:
             application/json;charset=UTF-8:
               schema:
-                $ref: '#/components/schemas/AddTaskToUserResponse'
+                $ref: '#/components/schemas/ResultWithId'
         default:
           description: Ошибка
           content:
@@ -69,7 +123,7 @@ components:
             id:
               type: integer
         - $ref: '#/components/schemas/Task'
-    AddTaskToUserResponse:
+    ResultWithId:
       type: object
       required:
         - id
@@ -87,6 +141,19 @@ components:
         dateTime:
           type: string
           format: 'date-time'
+    User:
+      type: object
+      required:
+        - name
+        - login
+        - password
+      properties:
+        name:
+          type: string
+        login:
+          type: string
+        password:
+          type: string
     Error:
       type: object
       required:

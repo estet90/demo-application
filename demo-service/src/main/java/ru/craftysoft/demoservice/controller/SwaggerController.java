@@ -1,13 +1,17 @@
 package ru.craftysoft.demoservice.controller;
 
+import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.HttpResponseStatus;
-import ru.craftysoft.util.module.server.HttpResponse;
+import reactor.core.publisher.Mono;
+import ru.craftysoft.util.module.reactornetty.server.HttpResponse;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.io.IOException;
-import java.util.Map;
 import java.util.Objects;
+
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
+import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
 
 @Singleton
 public class SwaggerController {
@@ -23,13 +27,14 @@ public class SwaggerController {
         }
     }
 
-    public HttpResponse process() {
-        return new HttpResponse(
-                swagger,
-                HttpResponseStatus.OK,
-                Map.of(
-                        "Content-Type", "application/x-yaml",
-                        "Content-Length", String.valueOf(this.swagger.length)
+    public Mono<HttpResponse> process() {
+        return Mono.just(
+                new HttpResponse(
+                        swagger,
+                        HttpResponseStatus.OK,
+                        new DefaultHttpHeaders()
+                                .add(CONTENT_TYPE.toString(), "application/x-yaml")
+                                .add(CONTENT_LENGTH.toString(), String.valueOf(this.swagger.length))
                 )
         );
     }

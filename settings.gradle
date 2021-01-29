@@ -4,9 +4,9 @@ include "error-lib"
 include "util-lib"
 include "util-lib:db-module"
 findProject(":util-lib:db-module")?.name = "db-module"
-include "util-lib:server-module"
-findProject(":util-lib:server-module")?.name = "server-module"
-include "util-lib:kafka-module"
-findProject(":util-lib:kafka-module")?.name = "kafka-module"
+include "util-lib:reactor-netty-module"
+findProject(":util-lib:reactor-netty-module")?.name = "reactor-netty-module"
 include "util-lib:common-module"
 findProject(":util-lib:common-module")?.name = "common-module"
+include 'db'
+

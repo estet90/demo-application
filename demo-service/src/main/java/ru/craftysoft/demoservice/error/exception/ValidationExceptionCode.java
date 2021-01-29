@@ -9,6 +9,7 @@ import ru.craftysoft.error.exception.code.ExceptionCode;
 @Getter
 public enum ValidationExceptionCode implements ExceptionCode<ValidationException> {
     INCORRECT_REQUEST("01", "Некорректный запрос"),
+    INCORRECT_RESPONSE("02", "Невалидный ответ"),
     ;
 
     private final String code;

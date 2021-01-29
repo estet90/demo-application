@@ -2,9 +2,16 @@ db:
   demo:
     host: localhost
     port: 5432
-    name: demo
-    username: postgres
-    password: postgres
+    name: todo
+    username: todo
+    password: todo
+
+rest:
+  demo:
+    url: http://localhost:8080
+
+server:
+  port: 8080
 
 logging.level:
   ru.craftysoft: trace

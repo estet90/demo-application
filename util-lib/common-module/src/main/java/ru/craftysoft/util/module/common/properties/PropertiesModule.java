@@ -11,7 +11,6 @@ import ru.craftysoft.util.module.common.properties.source.PropertySource;
 import ru.craftysoft.util.module.common.properties.source.SystemPropertiesPropertySource;
 import ru.craftysoft.util.module.common.properties.source.YamlPropertySource;
 
-import javax.annotation.Nullable;
 import javax.inject.Singleton;
 import java.util.Map;
 import java.util.Set;
@@ -22,7 +21,6 @@ import static java.util.Comparator.comparing;
 
 @Module
 public class PropertiesModule {
-    @Nullable
     private final String configFileLocation;
 
     public PropertiesModule(String[] args) {

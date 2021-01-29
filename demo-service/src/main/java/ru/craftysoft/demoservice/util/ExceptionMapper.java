@@ -1,5 +1,6 @@
 package ru.craftysoft.demoservice.util;
 
+import reactor.util.context.ContextView;
 import ru.craftysoft.error.exception.BaseException;
 
 import static ru.craftysoft.demoservice.error.operation.ModuleOperationCode.resolve;
@@ -7,10 +8,10 @@ import static ru.craftysoft.error.exception.ExceptionFactory.newInternalExceptio
 
 public class ExceptionMapper {
 
-    public static BaseException mapException(Throwable e) {
+    public static BaseException mapException(ContextView context, Throwable e) {
         return e instanceof BaseException baseException
                 ? baseException
-                : newInternalException(e, resolve(), e.getMessage());
+                : newInternalException(e, resolve(context), e.getMessage());
     }
 
 }

@@ -1,0 +1,53 @@
+plugins {
+    id "org.flywaydb.flyway" version "7.5.2"
+    id "nu.studer.jooq" version "5.2"
+    id "java"
+}
+
+group "ru.craftysoft"
+version "1.0.0"
+
+dependencies {
+    jooqGenerator("org.postgresql:postgresql:42.2.18")
+}
+
+flyway {
+    url = "$dbUrl"
+    user = "$dbUser"
+    password = "$dbPassword"
+}
+
+def out = "build/jook/src/main/java";
+
+jooq {
+    configurations {
+        main {
+            generationTool {
+                jdbc {
+                    driver = "org.postgresql.Driver"
+                    url = "$dbUrl"
+                    user = "$dbUser"
+                    password = "$dbPassword"
+                }
+                generator {
+                    database {
+                        inputSchema = "todo"
+                    }
+                    target {
+                        packageName = "ru.craftysoft.todo"
+                        directory = "$out"
+                    }
+                }
+            }
+        }
+    }
+}
+
+sourceSets.main.java.srcDir("$out")
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    jcenter()
+    gradlePluginPortal()
+}

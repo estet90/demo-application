@@ -35,7 +35,7 @@ public class LogbackModule {
             }
 
             private void removeLogger(String logger) {
-                log.debug("LogbackModule.bind изменён уровень логирования {} {} -> {}", logger, properties.get(logger), DEFAULT_LOG_LEVEL);
+                log.debug("LogbackModule.refresh изменён уровень логирования {} {} -> {}", logger, properties.get(logger), DEFAULT_LOG_LEVEL);
                 ctx.getLogger(logger).setLevel(DEFAULT_LOG_LEVEL);
             }
 
@@ -44,7 +44,7 @@ public class LogbackModule {
                 var level = ofNullable(logLevel.getValue()).map(String::toUpperCase).map(Level::toLevel).orElse(null);
                 var oldLevel = ctx.getLogger(logger).getLevel();
                 ctx.getLogger(logger).setLevel(level);
-                log.debug("LogbackModule.bind изменён уровень логирования {} {} -> {}", logger, oldLevel, level);
+                log.debug("LogbackModule.refresh изменён уровень логирования {} {} -> {}", logger, oldLevel, level);
             }
         };
     }

@@ -1,6 +1,0 @@
-dependencies {
-    compile(
-            "org.apache.kafka:kafka-clients",
-            "io.projectreactor.kafka:reactor-kafka"
-    )
-}

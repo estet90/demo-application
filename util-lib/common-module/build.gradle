@@ -1,9 +1,11 @@
 dependencies {
-    compile(
+    api(
             "com.google.dagger:dagger",
             "com.google.code.findbugs:jsr305",
             "javax.annotation:javax.annotation-api",
+
             "org.hibernate.validator:hibernate-validator",
+            "org.glassfish:jakarta.el",
 
             "org.slf4j:slf4j-api",
             "org.slf4j:jul-to-slf4j",
@@ -16,10 +18,11 @@ dependencies {
             "com.fasterxml.jackson.datatype:jackson-datatype-jdk8",
             "com.fasterxml.jackson.datatype:jackson-datatype-jsr310",
 
-            "org.snakeyaml:snakeyaml-engine",
-
-            "commons-cli:commons-cli",
             "org.apache.commons:commons-lang3",
+    )
+    implementation(
+            "org.snakeyaml:snakeyaml-engine",
+            "commons-cli:commons-cli",
     )
     compileOnly("com.squareup:javapoet")
 }

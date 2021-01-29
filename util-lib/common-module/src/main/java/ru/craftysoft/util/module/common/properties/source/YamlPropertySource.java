@@ -1,21 +1,19 @@
 package ru.craftysoft.util.module.common.properties.source;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Paths;
 import java.util.Map;
 
+@Slf4j
+@RequiredArgsConstructor
 public class YamlPropertySource implements PropertySource {
-    public static Logger log = LoggerFactory.getLogger(YamlPropertySource.class);
 
     private final String configFileLocation;
-
-    public YamlPropertySource(String configFileLocation) {
-        this.configFileLocation = configFileLocation;
-    }
 
     @Override
     public Map<String, String> getProperties() {
@@ -32,7 +30,7 @@ public class YamlPropertySource implements PropertySource {
             } else {
                 return YamlParser.parseYaml(is);
             }
-        } catch (java.nio.file.NoSuchFileException e) {
+        } catch (NoSuchFileException e) {
             log.warn("Config file location doesn't exist: {}", this.configFileLocation);
             return Map.of();
         } catch (IOException e) {

@@ -8,14 +8,17 @@ group "ru.craftysoft"
 version "1.0.0"
 
 dependencies {
-    compile(
-            project(":util-lib:server-module"),
+    implementation(
+            project(":util-lib:reactor-netty-module"),
             project(":util-lib:db-module"),
             project(":error-lib"),
+            project(":db"),
+
+            "io.swagger:swagger-annotations:1.6.2",
     )
     compileOnly("org.projectlombok:lombok")
 
-    testCompile(
+    testImplementation(
             "org.junit.jupiter:junit-jupiter:5.7.0",
             "org.assertj:assertj-core:3.18.1",
             "org.mockito:mockito-core:3.6.28",
@@ -35,13 +38,15 @@ def generatedFilesPath = "$projectDir/build/generated/sources"
 def generatedOpenapiFilesPath = "$generatedFilesPath/openapi"
 
 task generateRestApiWrap() {
-    def openapiInputSpec = "$projectDir/src/main/resources/openapi/self/demo-service.yaml"
+    def openapiInputFolder = "$projectDir/src/main/resources/openapi/self"
+    def openapiInputSpec = "$openapiInputFolder/demo-service.yaml"
     inputs.file("$openapiInputSpec")
     outputs.dir("$generatedOpenapiFilesPath")
     doLast {
         task generateRestApi(type: org.openapitools.generator.gradle.plugin.tasks.GenerateTask) {
-            generatorName = "java-vertx"
+            generatorName = "jaxrs-jersey"
             inputSpec = "$openapiInputSpec"
+            templateDir = "$openapiInputFolder"
             outputDir = "$generatedOpenapiFilesPath"
             modelPackage = "ru.craftysoft.demoservice.model"
             generateModelTests = false
@@ -61,31 +66,18 @@ task generateRestApiWrap() {
 runtime {
     enableCds()
     addOptions("--strip-debug", "--compress", "2", "--no-header-files", "--no-man-pages")
-    addModules("java.base", "java.naming", "java.xml", "jdk.unsupported")
+    addModules("java.base", "java.naming", "java.xml", "jdk.unsupported", "java.sql")
     launcher {
-        jvmArgs = ["--enable-preview"]
+        getJvmArgs().add("--enable-preview")
     }
 }
 
-application {
-    mainClassName = "ru.craftysoft.demoservice.Application"
-}
+application.getMainClass().set("ru.craftysoft.demoservice.Application")
 
-sourceSets.main.java {
-    srcDirs("$generatedOpenapiFilesPath/src/main/java", "$generatedFilesPath/annotationProcessor/java/main")
-}
-
-compileJava() {
-    dependsOn generateRestApiWrap
-}
-
-repositories {
-    jcenter()
-    mavenCentral()
-    gradlePluginPortal()
-}
+sourceSets.main.java.srcDirs("$generatedOpenapiFilesPath/src/gen/java", "$generatedFilesPath/annotationProcessor/java/main")
 
 tasks.withType(JavaCompile) {
+    dependsOn(generateRestApiWrap)
     options.compilerArgs += "--enable-preview"
     options.compilerArgs += "-Xlint:preview"
     options.fork = true
@@ -98,5 +90,12 @@ test {
     }
     testLogging {
         events "passed", "skipped", "failed"
+        exceptionFormat "full"
     }
+}
+
+repositories {
+    jcenter()
+    mavenCentral()
+    gradlePluginPortal()
 }

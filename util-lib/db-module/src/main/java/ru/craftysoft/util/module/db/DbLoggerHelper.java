@@ -1,18 +1,17 @@
 package ru.craftysoft.util.module.db;
 
+import io.vertx.sqlclient.Row;
+import io.vertx.sqlclient.RowSet;
 import io.vertx.sqlclient.Tuple;
+import org.jooq.Query;
 import org.slf4j.Logger;
-import reactor.core.publisher.Signal;
 import reactor.util.context.ContextView;
-import ru.craftysoft.util.module.common.reactor.SwitchMdc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.function.Function;
 
-import static java.util.Objects.nonNull;
-import static reactor.core.publisher.SignalType.ON_ERROR;
+import static ru.craftysoft.util.module.common.reactor.MdcUtils.withContext;
 
 public class DbLoggerHelper {
 
@@ -22,6 +21,16 @@ public class DbLoggerHelper {
                 log.trace("{}.in execute query\n{}", point, sql);
             } else {
                 log.debug("{}.in", point);
+            }
+        }
+    }
+
+    static void logIn(Logger log, String point, Query query) {
+        if (log.isDebugEnabled()) {
+            if (log.isTraceEnabled()) {
+                log.trace("{}.in execute query\n{}", point, query);
+            } else {
+                log.trace("{}.in execute query with parameters: {}", point, query.getBindValues());
             }
         }
     }
@@ -46,6 +55,27 @@ public class DbLoggerHelper {
         }
     }
 
+    static <T> void logOut(Logger log, String point, ContextView context, Function<Row, T> mapper, RowSet<Row> rowSet) {
+        if (log.isTraceEnabled()) {
+            var mapperResults = new ArrayList<T>();
+            for (var row : rowSet) {
+                var mapperResult = mapper.apply(row);
+                mapperResults.add(mapperResult);
+            }
+            withContext(context, () -> log.trace("{}.out result={}", point, mapperResults));
+        } else {
+            withContext(context, () -> log.debug("{}.out size={}", point, rowSet.size()));
+        }
+    }
+
+    static <T> void logOut(Logger log, String point, ContextView context, RowSet<Row> rowSet, T mapperResult) {
+        if (log.isTraceEnabled()) {
+            withContext(context, () -> log.trace("{}.out result={}", point, mapperResult));
+        } else {
+            withContext(context, () -> log.debug("{}.out size={}", point, rowSet.size()));
+        }
+    }
+
     private static List<Object> getParameters(Tuple args) {
         var size = args.size();
         var list = new ArrayList<>(size);
@@ -61,18 +91,6 @@ public class DbLoggerHelper {
             result.add(getParameters(tuple));
         }
         return result;
-    }
-
-    static void logError(Logger log, String point, Signal<?> signal) {
-        if (ON_ERROR.equals(signal.getType()) && nonNull(signal.getThrowable())) {
-            DbLoggerHelper.withQueryId(signal.getContextView(), () -> log.error("{}.thrown {}", point, signal.getThrowable().getMessage()));
-        }
-    }
-
-    static void withQueryId(ContextView context, Runnable runnable) {
-        try (var ignored = new SwitchMdc(context, Map.of(MdcKey.QUERY_ID, UUID.randomUUID().toString()))) {
-            runnable.run();
-        }
     }
 
 }

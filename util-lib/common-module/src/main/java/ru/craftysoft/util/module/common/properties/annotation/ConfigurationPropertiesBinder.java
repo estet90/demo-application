@@ -6,6 +6,24 @@ public class ConfigurationPropertiesBinder {
 
     private static final String DEFAULT_NO_VALUE_ERROR_MESSAGE = "Невозможно выполнить преобразование, ни одно значение не задано";
 
+    public static Byte toByte(String value, Byte defaultValue) {
+        check(value, defaultValue);
+        return ofNullable(value).map(Byte::parseByte).orElse(defaultValue);
+    }
+
+    public static Byte toByte(String value) {
+        return ofNullable(value).map(Byte::parseByte).orElse(null);
+    }
+
+    public static Short toShort(String value, Short defaultValue) {
+        check(value, defaultValue);
+        return ofNullable(value).map(Short::parseShort).orElse(defaultValue);
+    }
+
+    public static Short toShort(String value) {
+        return ofNullable(value).map(Short::parseShort).orElse(null);
+    }
+
     public static Integer toInt(String value, Integer defaultValue) {
         check(value, defaultValue);
         return ofNullable(value).map(Integer::parseInt).orElse(defaultValue);
@@ -51,7 +69,7 @@ public class ConfigurationPropertiesBinder {
         return ofNullable(value).map(Double::parseDouble).orElse(null);
     }
 
-    public static String toString(String value, String defaultValue) {
+    public static String toStringWithDefaultValue(String value, String defaultValue) {
         check(value, defaultValue);
         return ofNullable(value).orElse(defaultValue);
     }

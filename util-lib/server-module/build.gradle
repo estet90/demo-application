@@ -1,3 +1,0 @@
-dependencies {
-    compile("io.projectreactor.netty:reactor-netty")
-}

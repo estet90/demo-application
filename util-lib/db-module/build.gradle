@@ -1,3 +1,6 @@
 dependencies {
-    compile("io.vertx:vertx-pg-client")
+    api(
+            "io.vertx:vertx-pg-client",
+            "org.jooq:jooq",
+    )
 }

@@ -1,8 +1,9 @@
 package ru.craftysoft.demoservice.service.dao;
 
 import io.vertx.sqlclient.SqlClient;
-import io.vertx.sqlclient.Transaction;
 import reactor.core.publisher.Mono;
+import ru.craftysoft.demoservice.model.User;
+import ru.craftysoft.todo.tables.records.UsersRecord;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -22,8 +23,24 @@ public class UserDaoAdapter {
     }
 
     public Mono<Boolean> checkUserById(SqlClient sqlClient, Long id) {
-        return dao.checkUserById(sqlClient, id)
+        return Mono.deferContextual(context -> dao.checkUserById(sqlClient, id)
                 .filter(b -> b)
-                .switchIfEmpty(Mono.error(newBusinessException(resolve(), USER_NOT_FOUND, String.format("id='%s'", id))));
+                .switchIfEmpty(Mono.error(newBusinessException(resolve(context), USER_NOT_FOUND, String.format("id='%s'", id)))));
+    }
+
+    public Mono<Boolean> checkUserById(Long id) {
+        return Mono.deferContextual(context -> dao.checkUserById(id)
+                .filter(b -> b)
+                .switchIfEmpty(Mono.error(newBusinessException(resolve(context), USER_NOT_FOUND, String.format("id='%s'", id)))));
+    }
+
+    public Mono<Long> addUser(User user) {
+        var userRecord = new UsersRecord(
+                null,
+                user.getName(),
+                user.getLogin(),
+                user.getPassword()
+        );
+        return dao.addUser(userRecord);
     }
 }

@@ -3,15 +3,13 @@ package ru.craftysoft.demoservice;
 import lombok.extern.slf4j.Slf4j;
 import ru.craftysoft.error.exception.ExceptionFactory;
 import ru.craftysoft.util.module.common.properties.PropertiesModule;
-import ru.craftysoft.util.module.common.reactor.ReactorMdc;
 
 @Slf4j
 public class Application {
 
     public static void main(String[] args) {
-        ReactorMdc.init();
-        new ExceptionFactory("0001");
         var startTimeMillis = System.currentTimeMillis();
+        new ExceptionFactory("0001");
         var component = DaggerApplicationComponent.builder()
                 .propertiesModule(new PropertiesModule(args))
                 .build();
